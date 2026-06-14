@@ -40,7 +40,7 @@ MODEL_CONFIG: Dict[ModelName, Dict[str, str]] = {
     ModelName.QWEN: {
         "base_url": "https://ai.onyxaxis.org/api/chat/completions",
         "api_key_env": "FS_ONLYAXIS",
-        "model": "qwen3-32b-fast",
+        "model": "glm-4.5v",
     },
     ModelName.GLM: {
         "base_url": "https://ai.onyxaxis.org/api/chat/completions",

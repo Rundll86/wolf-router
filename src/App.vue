@@ -84,7 +84,7 @@ const messages = ref<Message[]>([
 const inputMessage = ref('');
 const isLoading = ref(false);
 const messageList = ref<HTMLElement | null>(null);
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = '';
 function formatTime(): string {
  return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 }

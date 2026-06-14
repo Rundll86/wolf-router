@@ -34,11 +34,16 @@ def chat():
     try:
         data = request.get_json()
         user_input = data.get("message", "")
+        image = data.get("image", "")
 
-        if not user_input:
-            return jsonify({"error": "请提供消息内容"}), 400
+        if not user_input and not image:
+            return jsonify({"error": "请提供消息内容或图片"}), 400
 
-        route_result = call_router_llm(user_input)
+        router_input = user_input
+        if image:
+            router_input = f"[用户上传了一张图片] {user_input}" if user_input else "[用户上传了一张图片，请识别内容]"
+
+        route_result = call_router_llm(router_input)
 
         if not route_result:
             return jsonify(
@@ -56,7 +61,7 @@ def chat():
                 + "\n"
             )
 
-            for chunk in stream_model_response(model_name, user_input):
+            for chunk in stream_model_response(model_name, user_input, image):
                 yield json.dumps({"type": "response", "content": chunk}) + "\n"
 
         return Response(generate(), mimetype="application/json")

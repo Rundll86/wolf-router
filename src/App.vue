@@ -14,7 +14,10 @@
 					</div>
 					<div class="message-content">
 						<div v-if="msg.type === 'user'" class="message-text">
-							{{ msg.content }}
+							<div v-if="msg.image" class="user-image">
+								<img :src="msg.image" alt="用户上传的图片" />
+							</div>
+							<div v-if="msg.content">{{ msg.content }}</div>
 						</div>
 						<div v-else>
 							<div v-if="msg.route" class="route-info">
@@ -38,74 +41,128 @@
 				</div>
 			</div>
 
-			<div class="input-container">
-				<input v-model="inputMessage" @keyup.enter="sendMessage" type="text" class="message-input"
-					placeholder="输入你的问题..." :disabled="isLoading" />
-				<button @click="sendMessage" class="send-button" :disabled="!inputMessage.trim() || isLoading">
-					发送
-				</button>
+			<div class="input-area">
+				<div v-if="pendingImage" class="image-preview">
+					<img :src="pendingImage" alt="待发送图片" />
+					<button @click="clearImage" class="clear-image-btn" title="移除图片">×</button>
+				</div>
+				<div class="input-container">
+					<input v-model="inputMessage" @keyup.enter="sendMessage" type="text" class="message-input"
+						placeholder="输入你的问题，或粘贴图片..." :disabled="isLoading" />
+					<button @click="sendMessage" class="send-button"
+						:disabled="(!inputMessage.trim() && !pendingImage) || isLoading">
+						发送
+					</button>
+				</div>
 			</div>
 		</div>
 	</div>
 </template>
 
-<script setup lang="ts">import { ref, nextTick, onMounted } from 'vue';
+<script setup lang="ts">
+import { ref, nextTick, onMounted, onUnmounted } from 'vue';
+
 interface RouteInfo {
 	model: string;
 	reason: string;
 }
+
 interface Message {
 	type: 'user' | 'system';
 	content: string;
+	image?: string;
 	route?: RouteInfo;
 	time: string;
 }
+
 const messages = ref<Message[]>([
 	{
 		type: 'system',
-		content: '欢迎使用 Wolf Router！请输入你的问题，我会为你选择最合适的 AI 模型来回答。',
+		content: '欢迎使用 Wolf Router！请输入你的问题，我会为你选择最合适的 AI 模型来回答。你也可以直接粘贴图片进行识图。',
 		time: new Date().toLocaleTimeString()
 	}
 ]);
+
 const inputMessage = ref('');
 const isLoading = ref(false);
 const messageList = ref<HTMLElement | null>(null);
+const pendingImage = ref<string>('');
 const API_BASE_URL = '';
+
 function formatTime(): string {
 	return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 }
+
+function handlePaste(event: ClipboardEvent) {
+	const items = event.clipboardData?.items;
+	if (!items) return;
+
+	for (let i = 0; i < items.length; i++) {
+		const item = items[i];
+		if (item.type.startsWith('image/')) {
+			event.preventDefault();
+			const file = item.getAsFile();
+			if (file) {
+				const reader = new FileReader();
+				reader.onload = (e) => {
+					pendingImage.value = e.target?.result as string;
+				};
+				reader.readAsDataURL(file);
+			}
+			break;
+		}
+	}
+}
+
+function clearImage() {
+	pendingImage.value = '';
+}
+
 async function sendMessage() {
-	if (!inputMessage.value.trim() || isLoading.value)
+	if ((!inputMessage.value.trim() && !pendingImage.value) || isLoading.value)
 		return;
+
 	const userMsg: Message = {
 		type: 'user',
 		content: inputMessage.value.trim(),
+		image: pendingImage.value || undefined,
 		time: formatTime()
 	};
+
 	messages.value.push(userMsg);
 	inputMessage.value = '';
+	const imageToSend = pendingImage.value;
+	pendingImage.value = '';
 	isLoading.value = true;
 	await scrollToBottom();
+
 	try {
 		const response = await fetch(`${API_BASE_URL}/api/chat`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
 			},
-			body: JSON.stringify({ message: userMsg.content })
+			body: JSON.stringify({
+				message: userMsg.content,
+				image: imageToSend || undefined
+			})
 		});
+
 		if (!response.ok) {
 			throw new Error('提供商异常，可能是服务器网络问题，重试一次吧。');
 		}
+
 		const reader = response.body?.getReader();
 		const decoder = new TextDecoder('utf-8');
 		let systemMsg: Message | null = null;
+
 		while (reader) {
 			const { done, value } = await reader.read();
-			if (done)
-				break;
+			if (done) break;
+
 			const chunk = decoder.decode(value);
 			const lines = chunk.split('\n').filter(line => line.trim());
+
 			for (const line of lines) {
 				try {
 					const data = JSON.parse(line);
@@ -144,14 +201,21 @@ async function sendMessage() {
 		await scrollToBottom();
 	}
 }
+
 async function scrollToBottom() {
 	await nextTick();
 	if (messageList.value) {
 		messageList.value.scrollTop = messageList.value.scrollHeight;
 	}
 }
+
 onMounted(() => {
 	scrollToBottom();
+	document.addEventListener('paste', handlePaste);
+});
+
+onUnmounted(() => {
+	document.removeEventListener('paste', handlePaste);
 });
 </script>
 
@@ -168,6 +232,7 @@ onMounted(() => {
 	padding: 20px;
 	color: white;
 	background: rgba(0, 0, 0, 0.2);
+	flex-shrink: 0;
 }
 
 .header h1 {
@@ -189,6 +254,7 @@ onMounted(() => {
 	margin: 0 auto;
 	width: 100%;
 	padding: 20px;
+	min-height: 0;
 }
 
 .message-list {
@@ -198,6 +264,7 @@ onMounted(() => {
 	background: rgba(255, 255, 255, 0.95);
 	border-radius: 16px 16px 0 0;
 	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+	min-height: 0;
 }
 
 .message-item {
@@ -241,6 +308,17 @@ onMounted(() => {
 	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 	color: white;
 	border-radius: 16px 16px 0 16px;
+}
+
+.user-image {
+	margin-bottom: 8px;
+}
+
+.user-image img {
+	max-width: 200px;
+	max-height: 200px;
+	border-radius: 8px;
+	display: block;
 }
 
 .route-info {
@@ -332,13 +410,51 @@ onMounted(() => {
 	font-size: 14px;
 }
 
-.input-container {
-	display: flex;
-	gap: 12px;
-	padding: 16px;
+.input-area {
 	background: white;
 	border-radius: 0 0 16px 16px;
 	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+	padding: 12px 16px;
+}
+
+.image-preview {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 8px;
+	padding: 8px;
+	background: #f1f3f4;
+	border-radius: 8px;
+}
+
+.image-preview img {
+	max-width: 80px;
+	max-height: 80px;
+	border-radius: 4px;
+}
+
+.clear-image-btn {
+	width: 24px;
+	height: 24px;
+	border: none;
+	background: #ff4444;
+	color: white;
+	border-radius: 50%;
+	cursor: pointer;
+	font-size: 16px;
+	line-height: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.clear-image-btn:hover {
+	background: #cc0000;
+}
+
+.input-container {
+	display: flex;
+	gap: 12px;
 }
 
 .message-input {
@@ -390,9 +506,8 @@ onMounted(() => {
 		padding: 10px;
 	}
 
-	.input-container {
-		padding: 12px;
-		gap: 8px;
+	.input-area {
+		padding: 10px 12px;
 	}
 
 	.message-input {
@@ -403,6 +518,11 @@ onMounted(() => {
 	.send-button {
 		padding: 12px 18px;
 		font-size: 14px;
+	}
+
+	.user-image img {
+		max-width: 150px;
+		max-height: 150px;
 	}
 }
 </style>

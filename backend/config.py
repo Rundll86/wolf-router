@@ -30,7 +30,7 @@ MODEL_CONFIG: Dict[ModelName, Dict[str, str]] = {
     ModelName.DOUBAO: {
         "base_url": "https://ai.onyxaxis.org/api/chat/completions",
         "api_key_env": "FS_ONLYAXIS",
-        "model": "ernie-4.0-turbo",
+        "model": "glm-4.5v",
     },
     ModelName.GEMINI: {
         "base_url": "https://ai.onyxaxis.org/api/chat/completions",

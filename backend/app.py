@@ -1,12 +1,13 @@
 import json
 import os
 
-from config import ModelName
+from config import ModelName, get_model_api_key
 from flask import Flask, Response, jsonify, request, send_from_directory
 from flask_cors import CORS
 from models import stream_model_response
 from router import call_router_llm
 
+print(get_model_api_key(ModelName.GLM))
 app = Flask(__name__, static_folder="../dist", static_url_path="")
 CORS(app)
 
@@ -40,7 +41,9 @@ def chat():
         route_result = call_router_llm(user_input)
 
         if not route_result:
-            return jsonify({"error": "路由失败，请稍后重试"}), 500
+            return jsonify(
+                {"error": "提供商异常，可能是服务器网络问题，稍后再试吧。"}
+            ), 500
 
         model_name = route_result.model
         reason = route_result.reason

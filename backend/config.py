@@ -18,39 +18,39 @@ class ModelName(Enum):
 
 MODEL_CONFIG: Dict[ModelName, Dict[str, str]] = {
     ModelName.CLAUDE: {
-        "base_url": "https://ai.onyxaxis.org/api",
+        "base_url": "https://ai.onyxaxis.org/api/chat/completions",
         "api_key_env": "FS_ONLYAXIS",
         "model": "claude-opus-4.8",
     },
     ModelName.GPT: {
-        "base_url": "https://ai.onyxaxis.org/api",
+        "base_url": "https://ai.onyxaxis.org/api/chat/completions",
         "api_key_env": "FS_ONLYAXIS",
         "model": "gpt-5.5-s",
     },
     ModelName.DOUBAO: {
-        "base_url": "https://ai.onyxaxis.org/api",
+        "base_url": "https://ai.onyxaxis.org/api/chat/completions",
         "api_key_env": "FS_ONLYAXIS",
         "model": "ernie-4.0-turbo",
     },
     ModelName.GEMINI: {
-        "base_url": "https://ai.onyxaxis.org/api",
+        "base_url": "https://ai.onyxaxis.org/api/chat/completions",
         "api_key_env": "FS_ONLYAXIS",
         "model": "gemini-3.1-pro-preview",
     },
     ModelName.QWEN: {
-        "base_url": "https://ai.onyxaxis.org/api",
+        "base_url": "https://ai.onyxaxis.org/api/chat/completions",
         "api_key_env": "FS_ONLYAXIS",
         "model": "qwen3-32b-fast",
     },
     ModelName.GLM: {
-        "base_url": "https://ai.onyxaxis.org/api",
+        "base_url": "https://ai.onyxaxis.org/api/chat/completions",
         "api_key_env": "FS_ONLYAXIS",
         "model": "glm-4.5v",
     },
 }
 
 ROUTER_LLM_CONFIG = {
-    "base_url": "https://ai.onyxaxis.org/api",
+    "base_url": "https://ai.onyxaxis.org/api/chat/completions",
     "api_key_env": "FS_ONLYAXIS",
     "model": "glm-4.5v",
 }

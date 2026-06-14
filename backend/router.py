@@ -14,21 +14,16 @@ class RouteResult:
 
 
 def parse_router_response(response_text: str) -> Optional[RouteResult]:
-    try:
-        match = re.search(r"\{.*\}", response_text, re.DOTALL)
-        if match:
-            json_str = match.group(0)
-            data = json.loads(json_str)
+    match = re.search(r"\{.*\}", response_text, re.DOTALL)
+    if match:
+        json_str = match.group(0)
+        data = json.loads(json_str)
 
-            if "model" in data and "reason" in data:
-                model_name = data["model"].strip().lower()
-                if ModelName.has_value(model_name):
-                    return RouteResult(
-                        model=ModelName(model_name), reason=data["reason"]
-                    )
-        return None
-    except json.JSONDecodeError:
-        return None
+        if "model" in data and "reason" in data:
+            model_name = data["model"].strip().lower()
+            if ModelName.has_value(model_name):
+                return RouteResult(model=ModelName(model_name), reason=data["reason"])
+    return None
 
 
 def call_router_llm(user_input: str) -> Optional[RouteResult]:
@@ -51,17 +46,12 @@ def call_router_llm(user_input: str) -> Optional[RouteResult]:
         "messages": messages,
     }
 
-    try:
-        response = requests.post(
-            ROUTER_LLM_CONFIG["base_url"], headers=headers, json=payload, timeout=30
-        )
-        response.raise_for_status()
+    response = requests.post(
+        ROUTER_LLM_CONFIG["base_url"], headers=headers, json=payload, timeout=30
+    )
+    response.raise_for_status()
 
-        result = response.json()
-        if result.get("choices"):
-            content = result["choices"][0]["message"]["content"]
-            return parse_router_response(content)
-
-        return None
-    except requests.exceptions.RequestException:
-        return None
+    result = response.json()
+    if result.get("choices"):
+        content = result["choices"][0]["message"]["content"]
+        return parse_router_response(content)

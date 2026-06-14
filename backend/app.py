@@ -31,43 +31,39 @@ def catch_all(path):
 
 @app.route("/api/chat", methods=["POST"])
 def chat():
-    try:
-        data = request.get_json()
-        user_input = data.get("message", "")
-        image = data.get("image", "")
+    data = request.get_json()
+    user_input = data.get("message", "")
+    image = data.get("image", "")
 
-        if not user_input and not image:
-            return jsonify({"error": "请提供消息内容或图片"}), 400
+    if not user_input and not image:
+        return jsonify({"error": "请提供消息内容或图片"}), 400
 
-        router_input = user_input
-        if image:
-            router_input = f"[用户上传了一张图片] {user_input}" if user_input else "[用户上传了一张图片，请识别内容]"
+    router_input = user_input
+    if image:
+        router_input = (
+            f"[用户上传了一张图片] {user_input}"
+            if user_input
+            else "[用户上传了一张图片，请识别内容]"
+        )
 
-        route_result = call_router_llm(router_input)
+    route_result = call_router_llm(router_input)
 
-        if not route_result:
-            return jsonify(
-                {"error": "提供商异常，可能是服务器网络问题，稍后再试吧。"}
-            ), 500
+    if not route_result:
+        return jsonify({"error": "提供商异常，可能是服务器网络问题，稍后再试吧。"}), 500
 
-        model_name = route_result.model
-        reason = route_result.reason
+    model_name = route_result.model
+    reason = route_result.reason
 
-        def generate():
-            yield (
-                json.dumps(
-                    {"type": "route", "model": model_name.value, "reason": reason}
-                )
-                + "\n"
-            )
+    def generate():
+        yield (
+            json.dumps({"type": "route", "model": model_name.value, "reason": reason})
+            + "\n"
+        )
 
-            for chunk in stream_model_response(model_name, user_input, image):
-                yield json.dumps({"type": "response", "content": chunk}) + "\n"
+        for chunk in stream_model_response(model_name, user_input, image):
+            yield json.dumps({"type": "response", "content": chunk}) + "\n"
 
-        return Response(generate(), mimetype="application/json")
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    return Response(generate(), mimetype="application/json")
 
 
 @app.route("/api/models", methods=["GET"])

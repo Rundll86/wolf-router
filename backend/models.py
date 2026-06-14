@@ -39,38 +39,35 @@ def stream_openai(
         "stream": True,
     }
 
-    try:
-        response = requests.post(
-            MODEL_CONFIG[model_name]["base_url"],
-            headers=headers,
-            json=payload,
-            stream=True,
-            timeout=120,
-        )
-        response.raise_for_status()
+    response = requests.post(
+        MODEL_CONFIG[model_name]["base_url"],
+        headers=headers,
+        json=payload,
+        stream=True,
+        timeout=120,
+    )
+    response.raise_for_status()
 
-        for line in response.iter_lines():
-            if not line:
+    for line in response.iter_lines():
+        if not line:
+            continue
+        line_str = line.decode("utf-8")
+        if not line_str.startswith("data: "):
+            continue
+        data_str = line_str[6:]
+        if data_str == "[DONE]":
+            break
+        try:
+            data = json.loads(data_str)
+            choices = data.get("choices", [])
+            if not choices:
                 continue
-            line_str = line.decode("utf-8")
-            if not line_str.startswith("data: "):
-                continue
-            data_str = line_str[6:]
-            if data_str == "[DONE]":
-                break
-            try:
-                data = json.loads(data_str)
-                choices = data.get("choices", [])
-                if not choices:
-                    continue
-                delta = choices[0].get("delta", {})
-                content = delta.get("content", "")
-                if content:
-                    yield content
-            except json.JSONDecodeError:
-                continue
-    except requests.exceptions.RequestException as e:
-        yield f"错误：{str(e)}"
+            delta = choices[0].get("delta", {})
+            content = delta.get("content", "")
+            if content:
+                yield content
+        except json.JSONDecodeError:
+            continue
 
 
 def stream_model_response(
